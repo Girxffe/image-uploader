@@ -1,0 +1,52 @@
+org: <INSERT ORG HERE>
+app: image-uploader
+service: image-uploader
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  stage: prod
+  region: eu-west-2
+  profile: <INSERT PROFILE HERE>
+  runtime: nodejs14.x
+
+custom:
+  fileUploadBucketName: <INSERT BUCKET NAME HERE>
+
+plugins:
+  - serverless-offline
+  - serverless-iam-roles-per-function
+
+functions:
+  upload:
+    handler: handler.upload
+    name: image-uploader-function
+    description: A lambda to upload files to S3 bucket
+    timeout: 30
+    memorySize: 128
+    events:
+      - httpApi:
+          path: /
+          method: POST
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - "s3:PutObject"
+          - "s3:GetObject"
+          - "s3:PutObjectAcl"
+        Resource: arn:aws:s3:::${self:custom.fileUploadBucketName}/*
+      - Effect: Allow
+        Action:
+          - "s3:ListBucket"
+        Resource: arn:aws:s3:::${self:custom.fileUploadBucketName}/*
+    environment:
+      FILE_UPLOAD_BUCKET_NAME: ${self:custom.fileUploadBucketName}
+
+resources:
+  Resources:
+    FileBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.fileUploadBucketName}
+        AccessControl: PublicRead
